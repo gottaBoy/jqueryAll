@@ -1,0 +1,143 @@
+ * ----------------------------------------------------------  
+ * 函数介绍  
+ *  
+ * each函数通过jQuery.extend函数附加到jQuery对象中：  
+ * jQuery.extend({  
+ *     each: function() {}  
+ * });  
+ * 如果对jQuery.extend函数源码还不了解,可以参考《jQuery源码分析-extend函数》一文  
+ *  
+ * jQuery.each方法用于遍历一个数组或对象,并对当前遍历的元素进行处理  
+ * jQuery.each方法可以为处理函数增加附带的参数(带参数与不带参数的回调使用方法不完全一致)  
+ *  
+ * ----------------------------------------------------------  
+ * 使用说明  
+ * each函数根据参数的类型实现的效果不完全一致：  
+ * 1、遍历对象(有附加参数)  
+ * $.each(Object, function(p1, p2) {  
+ *     this;      //这里的this指向每次遍历中Object的当前属性值  
+ *     p1; p2;    //访问附加参数  
+ * }, ['参数1', '参数2']);  
+ *  
+ * 2、遍历数组(有附件参数)  
+ * $.each(Array, function(p1, p2){  
+ *     this;      //这里的this指向每次遍历中Array的当前元素  
+ *     p1; p2;    //访问附加参数  
+ * }, ['参数1', '参数2']);  
+ *  
+ * 3、遍历对象(没有附加参数)  
+ * $.each(Object, function(name, value) {  
+ *     this;     //this指向当前属性的值  
+ *     name;     //name表示Object当前属性的名称  
+ *     value;    //value表示Object当前属性的值  
+ * });  
+ *  
+ * 4、遍历数组(没有附加参数)  
+ * $.each(Array, function(i, value) {  
+ *     this;     //this指向当前元素  
+ *     i;        //i表示Array当前下标  
+ *     value;    //value表示Array当前元素  
+ * });  
+ * ----------------------------------------------------------  
+ *  
+ */  
+//jQuery.each(), $.each()   
+//@param {Object}|{Array} object 需要遍历处理的对象或数组   
+//@param {Function} callback 遍历处理回调函数   
+//@param {Array} args callback回调函数的附加参数   
+each: function(object, callback, args){   
+  
+    //当需要遍历的是一个对象时,name变量用于记录对象的属性名   
+    var name,       
+       
+    //当需要遍历的是一个数组时,i变量用于记录循环的数组下标   
+    i = 0,       
+       
+    //遍历数组长度,当需要遍历的对象是一个数组时存储数组长度   
+    //如果需要遍历的是一个对象,则length === undefined   
+    length = object.length,       
+       
+    //检查第1个参数object是否是一个对象   
+    //根据object.length排除数组类型，根据isFunction排除函数类型(因为函数也是对象)   
+    isObj = length === undefined || jQuery.isFunction(object);   
+       
+    //回调函数具有附加参数时,执行第一个分支   
+    //if(!!args) {   
+    if (args) {   
+           
+        //需要遍历的是一个对象   
+        if (isObj) {   
+               
+            //遍历对象属性,name是对象的属性名,再函数顶部已声明   
+            //许多人不太习惯for(var name in object)方式,如果不进行声明,则name就会被定义为全局变量   
+            for (name in object) {   
+               
+                //调用callback回调函数,且回调函数的作用域表示为当前属性的值   
+                //如:callback() {  this; //函数中的this指向当前属性值   
+                //将each的第3个参数args作为回调函数的附加参数   
+                if (callback.apply(object[name], args) === false) {   
+                   
+                    //如果在callback回调函数中使用return false;则不执行下一次循环   
+                    break;   
+                }   
+            }   
+        }   
+        //需要遍历的是一个数组   
+        else {   
+           
+            //循环长度,循环变量i在函数顶部已定义   
+            //循环变量的自增在循环内部执行   
+            for (; i < length;) {   
+               
+                //调用callback函数,与上面注释的callback调用一致   
+                //此处callback函数中的this指向当前数组元素   
+                if (callback.apply(object[i++], args) === false) {   
+                    break;   
+                }   
+            }   
+        }   
+           
+    }   
+    //回调函数没有附加参数时,执行第二个分支   
+    else {   
+       
+        //需要遍历的是一个对象   
+        if (isObj) {   
+           
+            //循环对象的属性名,name在函数顶部已定义   
+            for (name in object) {   
+               
+                //调用callback回调函数   
+                //在不带参数的对象遍历中,作用域表示为当前属性的值   
+                //且回调函数包含两个参数,第一个数当前属性名,第二个是当前属性值   
+                //我觉得这句代码修改一下会更好用：if(callback.call(object, name, object[name]) === false) {   
+                if (callback.call(object[name], name, object[name]) === false) {   
+                   
+                    //如果在callback回调函数中使用return false;则不执行下一次循环   
+                    break;   
+                }   
+            }   
+        }   
+        //需要遍历的是一个数组   
+        else {   
+            //这里的for写法有点BT,解释为：   
+            //var value = object[0];   
+            //for(; i < length;) {   
+            //    if(false === callback.call(value, i, value)) {   
+            //        break;   
+            //    }   
+            //    value = object[++i];   
+            //}   
+            //同样,我觉得这里的代码稍加修改会更好用:   
+            //for (; i < length && false !== callback.call(object, i, object[i++]);) {   
+            //}   
+            for (var value = object[0]; i < length && callback.call(value, i, value) !== false; value = object[++i]) {   
+            }   
+        }   
+    }   
+       
+    //这里返回遍历的对象或数组,但object没有被更改,因此一般不给$.each()赋值   
+    //但是如果按照我在注释中所修改的写法来使用,且在callback回调函数中对this(即对object的引用)进行了修改   
+    //则这里返回的object是被修改后的对象或数组   
+    return object;   
+}
